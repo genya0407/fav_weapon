@@ -76,6 +76,7 @@ def main():
 	mw = main_vbox()
 	
 	main_window.setCentralWidget(mw)
+	main_window.setWindowTitle('Weapons of mass favorite')
 	main_window.show()
 	
 	app.exec_()
