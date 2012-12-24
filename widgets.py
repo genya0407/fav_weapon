@@ -96,9 +96,14 @@ class action(object):
 	
 	def create_api_object(self, pin):
 		self.auth.get_access_token(pin)
-		self.auth.set_access_token(self.auth.access_token.key, self.auth.access_token.secret)
+		access_token_key = self.auth.access_token.key
+		access_token_secret = self.auth.access_token.secret
+		self.auth.set_access_token(access_token_key, access_token_secret)
 		self.api = tweepy.API(auth_handler=self.auth)
-		self.api.update_status('てすと三回目')
+		for i in self.api.home_timeline():
+			print(i.text)
+#		me = self.api.me()
+#		print(me.screen_name)
 #		self.api_list.append(api)
 			#デバッグ用
 #		for i in self.api_list:
