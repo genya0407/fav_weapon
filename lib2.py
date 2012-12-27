@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import time, random, urllib, cgi, hmac, hashlib, base64, sys, webbrowser, urllib.request
+import time, random, urllib, cgi, hmac, hashlib, base64, sys, webbrowser, requests
+from collections import OrderedDict
+from requests.auth import OAuth1
 
 class twitter(object):
 	def __init__(self,token=None):
@@ -20,26 +22,19 @@ class twitter(object):
 			
 		self.access_token = token[0]
 		self.access_token_secret = token[1]
-
-		
-		###########################################################################################################
-		pass
-		###########################################################################################################
-		
-
 		
 	def get_oauth_token(self): 
 		params = {
 			'oauth_consumer_key': self.consumer_key,
+			'oauth_nonce': str(random.getrandbits(64)),
 			'oauth_signature_method': 'HMAC-SHA1', 
 			'oauth_timestamp': str(int(time.time())),  
-			'oauth_nonce': str(random.getrandbits(64)),
 			'oauth_version': '1.0'
 			}
-
+		
 		params_str = '&'.join(['%s=%s' % (urllib.parse.quote(key, ''),urllib.parse.quote(params[key], '')) for key in sorted(params)])
 		message = '%s&%s&%s' % (self.method,urllib.parse.quote(self.request_token_url,''), urllib.parse.quote(params_str,''))
-	 
+		
 		key = '%s&%s' % (self.consumer_secret, '')
 
 		signature = hmac.new(key.encode(), message.encode(), hashlib.sha1)
@@ -116,13 +111,20 @@ class twitter(object):
 		
 		header_params_str = ','.join(['%s=%s' % (urllib.parse.quote(key,''),urllib.parse.quote(params[key],'~'))
 																		for key in sorted(params)])
+		header_params_str = 'OAuth ' + header_params_str
 		
-		opener = urllib.request.build_opener()
-		opener.addheaders = [('Authorization','OAuth %s' % header_params_str)]
+		status = 'status='+urllib.parse.quote(text)
 		
-		result = opener.open(self.update_url.encode(),urllib.parse.urlencode({'status':text.encode('utf-8')})).read()
+		req = urllib.request.Request(self.update_url)
+		req.add_header('Authorization',header_params_str)
+		req.add_data(status.encode())
+		res = urllib.request.urlopen(req)
+
+	def home_timeline(self):
+		
 
 def main():
+	
 	tw = twitter(['264147645-UUHUOZNxK0aPqSvXoW4mwG1zLrqmcTbCs1gMDnEA','cvcUfJtcWwYttQjhRYvzKOwWOurAuEuFWnQyLS39E'])
 	
 	#ついーと
