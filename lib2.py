@@ -16,12 +16,21 @@ class twitter(object):
 		self.request_token_url = 'http://twitter.com/oauth/request_token'
 		self.access_token_url = 'http://api.twitter.com/oauth/access_token'
 		self.update_url = 'https://api.twitter.com/1.1/statuses/update.json'
+		self.home_timeline_url = 'https://api.twitter.com/1/statuses/home_timeline.json'
 
 		if token == None :
 			token = self.get_oauth_token()
 			
 		self.access_token = token[0]
 		self.access_token_secret = token[1]
+		
+		self.params = {
+			'oauth_consumer_key': self.consumer_key,
+			'oauth_signature_method': 'HMAC-SHA1',
+			'oauth_timestamp': str(int(time.time())), 
+			'oauth_nonce': str(random.getrandbits(64)),
+			'oauth_version': '1.0'
+        }
 		
 	def get_oauth_token(self): 
 		params = {
@@ -85,14 +94,9 @@ class twitter(object):
 		return [token[b'oauth_token'][0].decode(), token[b'oauth_token_secret'][0].decode()] #[access_token, access_token_secret]
 
 	def update_status(self, text):
-		params = {
-			'oauth_consumer_key': self.consumer_key,
-			'oauth_signature_method': 'HMAC-SHA1',
-			'oauth_timestamp': str(int(time.time())), 
-			'oauth_nonce': str(random.getrandbits(64)),
-			'oauth_version': '1.0'
-        }
-        
+
+		params = self.params
+
 		params['oauth_token'] = self.access_token
 		params['status'] = text
 		
@@ -113,22 +117,44 @@ class twitter(object):
 																		for key in sorted(params)])
 		header_params_str = 'OAuth ' + header_params_str
 		
-		status = 'status='+urllib.parse.quote(text)
+		data = 'status='+urllib.parse.quote(text)
 		
 		req = urllib.request.Request(self.update_url)
 		req.add_header('Authorization',header_params_str)
-		req.add_data(status.encode())
+		req.add_data(data.encode())
 		res = urllib.request.urlopen(req)
 
 	def home_timeline(self):
+		params = self.params
 		
+		params_str = '&'.join(['%s=%s' % (urllib.parse.quote(key, ''),urllib.parse.quote(params[key], '~')) for key in sorted(params)])
+		
+		message = '%s&%s&%s' % (self.method,urllib.parse.quote(self.home_timeline_url,''), urllib.parse.quote(params_str,''))
+		
+		key = '%s&%s' % (self.consumer_secret, self.access_token_secret)
+		
+		signature = hmac.new(key.encode(),message.encode(),hashlib.sha1)
+		digest_base64 = base64.b64encode(signature.digest())
+		
+		params['oauth_signature'] = digest_base64
+		
+		header_params_str = ','.join(['%s=%s' % (urllib.parse.quote(key,''),urllib.parse.quote(params[key],'~'))
+																		for key in sorted(params)])
+		header_params_str = 'OAuth ' + header_params_str
+		
+		req = urllib.request.Request(self.home_timeline_url)
+		req.add_header('Authorization',header_params_str)
+		
+		res = urllib.request.urlopen(req)
+		print(res.read())
 
 def main():
 	
 	tw = twitter(['264147645-UUHUOZNxK0aPqSvXoW4mwG1zLrqmcTbCs1gMDnEA','cvcUfJtcWwYttQjhRYvzKOwWOurAuEuFWnQyLS39E'])
 	
 	#ついーと
-	tw.update_status('Hello, world')
+	#tw.update_status('おやー')
+	#tw.home_timeline()
 
 if __name__ == '__main__':
 	main()
