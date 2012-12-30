@@ -55,7 +55,7 @@ class twitter(object):
 		
 		params_str = '&'.join(['%s=%s' % (urllib.parse.quote(key, ''),urllib.parse.quote(params[key], '')) for key in sorted(params)])
 		message = '%s&%s&%s' % (self.method,urllib.parse.quote(self.request_token_url,''), urllib.parse.quote(params_str,''))
-		
+		print(message)
 		key = '%s&%s' % (self.consumer_secret, '')
 
 		signature = hmac.new(key.encode(), message.encode(), hashlib.sha1)
@@ -198,10 +198,12 @@ class twitter(object):
 		
 def main():
 	
-	tw = twitter(['264147645-UUHUOZNxK0aPqSvXoW4mwG1zLrqmcTbCs1gMDnEA','cvcUfJtcWwYttQjhRYvzKOwWOurAuEuFWnQyLS39E'])
+	#tw = twitter(['264147645-UUHUOZNxK0aPqSvXoW4mwG1zLrqmcTbCs1gMDnEA','cvcUfJtcWwYttQjhRYvzKOwWOurAuEuFWnQyLS39E'])
 	
+	t = twitter()
 	#ついーと
 	#tw.update_status('関数の命名センスのかけらもない')
+	'''
 	
 	twlist = tw.user_timeline('countboo')
 	idlist = []
@@ -210,7 +212,7 @@ def main():
 	
 	for i in idlist :
 		tw.create_fav(i)
-	
+	'''
 	#print(twlist[0]['id_str'])
 
 if __name__ == '__main__':
