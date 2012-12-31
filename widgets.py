@@ -1,9 +1,8 @@
-#coding: utf-8
+# coding: utf-8
 from PyQt4 import QtCore
 from PyQt4 import QtGui
 
-import twitter,pickle
-
+import twitter,pickle,os.path
 
 class target(QtGui.QWidget):
 	def __init__(self, parent=None):
@@ -57,9 +56,17 @@ class auth_widget(QtGui.QWidget):
 class main_widget(QtGui.QWidget):
 	def __init__(self, parent=None):
 		QtGui.QWidget.__init__(self, parent=parent)
+		self.twitter = twitter.twitter()
 		self.setUI()
-		self.user_list = []
-	
+
+	def set_user_list(self):
+		if os.path.isfile('./users.conf'):
+			with open('./users.conf','rb') as f:
+				self.user_list = pickle.load(f)
+			self.update_user_list_display()
+		else:
+			self.user_list = []
+
 	def setUI(self):
 		vbox = QtGui.QVBoxLayout()
 		
@@ -74,6 +81,8 @@ class main_widget(QtGui.QWidget):
 		
 		# target #
 		self.tg.trigger_button.clicked.connect(self.fav)
+		
+		self.set_user_list()
 		
 		vbox.addWidget(self.tg)
 		vbox.addWidget(self.ul)
@@ -91,15 +100,20 @@ class main_widget(QtGui.QWidget):
 		user_dict = self.twitter.get_user_dict(self.request_token,self.request_token_secret,verifier)
 		
 		self.user_list.append(user_dict)
-		
 		self.aw.verify_num.clear()
+
+		# 保存機構
+		with open('./users.conf','wb') as f:
+			pickle.dump(self.user_list,f)
+		
 		self.update_user_list_display()
 		
 	def update_user_list_display(self):
-		item = QtGui.QListWidgetItem()
 		for user_dict in self.user_list:
+			item = QtGui.QListWidgetItem()
 			item.setText(user_dict['screen_name'])
 			self.ul.list_widget.addItem(item)
+			print(user_dict['screen_name'])
 	
 	def fav(self): 
 		# target の screen_name を取得
