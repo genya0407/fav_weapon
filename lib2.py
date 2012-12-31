@@ -157,6 +157,8 @@ class twitter(object):
 		req = urllib.request.Request(req_url)
 		req.add_header('Authorization',self.gen_header_str(params))
 		
+		print(self.gen_header_str(params))
+		
 		return json.loads(urllib.request.urlopen(req).read().decode())
 		
 	def create_fav(self,tweet_id):
@@ -198,9 +200,10 @@ class twitter(object):
 		
 def main():
 	
-	#tw = twitter(['264147645-UUHUOZNxK0aPqSvXoW4mwG1zLrqmcTbCs1gMDnEA','cvcUfJtcWwYttQjhRYvzKOwWOurAuEuFWnQyLS39E'])
+	tw = twitter(['264147645-UUHUOZNxK0aPqSvXoW4mwG1zLrqmcTbCs1gMDnEA','cvcUfJtcWwYttQjhRYvzKOwWOurAuEuFWnQyLS39E'])
+	tw.user_timeline('countboo')
 	
-	t = twitter()
+	#t = twitter()
 	#ついーと
 	#tw.update_status('関数の命名センスのかけらもない')
 	'''

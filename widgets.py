@@ -1,8 +1,8 @@
 #coding: utf-8
 from PyQt4 import QtCore
 from PyQt4 import QtGui
-import tweepy
-import webbrowser
+
+import twitter2
 
 
 class target(QtGui.QWidget):
@@ -68,9 +68,9 @@ class main_widget(QtGui.QWidget):
 		
 		self.act = action()
 		
-			#結合
+			#connect
 		self.aw.launch_auth_window.clicked.connect(self.act.open_url)
-		self.aw.add_user.clicked.connect(self.pass_pin)
+		self.aw.add_user.clicked.connect(self.pass_verifier)
 		
 		vbox.addWidget(self.tg)
 		vbox.addWidget(self.ul)
@@ -78,36 +78,36 @@ class main_widget(QtGui.QWidget):
 		
 		self.setLayout(vbox)
 	
-	def pass_pin(self):
-		pin = self.aw.verify_num.text()
+	def pass_verifier(self):
+		pin = self.aw.verify_num.text().strip()
 #		print(pin)
-		self.act.create_api_object(pin)
+		self.act.create_user_dict(pin)
 
 class action(object):
 	def __init__(self):
-		consumer_key = 'HhFnDkO26i4Ct491Q5Zeg'
-		consumer_secret = 'XGNL9HqyEvO3AQtX9dMeZSsdeRY7LwjOPYnz2TcFB0'
-		
-		self.auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
-		self.api_list = []
+		self.twitter = twitter()
 	
 	def open_url(self):
-		webbrowser.open(self.auth.get_authorization_url())
+		self.request_token,self.request_token_secret = self.twitter.get_request_token()
+		self.twitter.get_verifier(request_token)
 	
-	def create_api_object(self, pin):
-		self.auth.get_access_token(pin)
-		access_token_key = self.auth.access_token.key
-		access_token_secret = self.auth.access_token.secret
-		self.auth.set_access_token(access_token_key, access_token_secret)
-		self.api = tweepy.API(auth_handler=self.auth)
-		for i in self.api.home_timeline():
-			print(i.text)
-#		me = self.api.me()
-#		print(me.screen_name)
-#		self.api_list.append(api)
-			#デバッグ用
-#		for i in self.api_list:
-#			i.update_status('てす')
+	def get_access_token(self,verifier):
+		access_token,access_token_secret,screen_name = self.twitter.get_access_token(self.request_token,self.request_token_secret,verifier)
+		return [self.access_token,self.access_token_secret,screen_name]
+	
+	def create_user_dict(self,verifier):
+		access = self.get_access_token(verifier)
+		
+		access_token = access[0]
+		access_token_secret = access[1]
+		screen_name =  access[2]
+		user_dict = {
+			'screen_name':screen_name,
+			'access_token':access_token,
+			'access_token_secret':access_token_secret
+		}
+		
+		return user_dict
 
 def main():
 	app = QtGui.QApplication([])
@@ -116,6 +116,7 @@ def main():
 	mw = main_widget()
 	main_window.setCentralWidget(mw)
 	main_window.setWindowTitle('weapons_of_mass_favoritation')
+	
 	main_window.show()
 	
 	app.exec_()

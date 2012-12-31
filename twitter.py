@@ -2,7 +2,7 @@
 try:
 	import time, random, urllib.request, urllib.parse, cgi, hmac, hashlib, base64, webbrowser, json, pickle
 except:
-	print('Error : ライブラリが足りません!!')
+	print('Error : Lack of libraries')
 
 CONSUMER_KEY = 'HhFnDkO26i4Ct491Q5Zeg'
 CONSUMER_SECRET = 'XGNL9HqyEvO3AQtX9dMeZSsdeRY7LwjOPYnz2TcFB0'
@@ -102,6 +102,7 @@ class twitter(object):
 			'count':count
 			}
 		argment = urllib.parse.urlencode(arg_params)
+		print(argment)
 		url = USER_STREAM_URL + '?' + argment
 		print(url)
 		req = self.gen_header(url,params)
