@@ -9,7 +9,7 @@ CONSUMER_SECRET = 'XGNL9HqyEvO3AQtX9dMeZSsdeRY7LwjOPYnz2TcFB0'
 REQUEST_TOKEN_URL = 'http://twitter.com/oauth/request_token'
 OAUTH_AUTHORIZE_URL = 'http://api.twitter.com/oauth/authorize'
 ACCESS_TOKEN_URL = 'http://api.twitter.com/oauth/access_token'
-USER_STREAM_URL = 'https://api.twitter.com/1.1/statuses/user_timeline.json'
+USER_TIMELINE_URL = 'https://api.twitter.com/1.1/statuses/user_timeline.json'
 FAV_URL = 'https://api.twitter.com/1.1/favorites/create.json'
 
 PARAMS = {
@@ -21,101 +21,148 @@ PARAMS = {
 }
 
 class twitter(object):
-	def __init__(self):
-		try:
-			with open('./users','rb') as f:
-				self.users_list = f.pickle.load(f)
-		except:
-			print('ユーザーが設定されていません。認証を行なってください')
-		
-	def get_signature(self,method,url,key,data=None):
-		params = PARAMS.copy()
-		if data:
-			for key in sorted(data):
-				params[key] = data[key]
-		
+	def gen_message(self,method,url,params): # methodとurlとparamsを渡すとmessageを返す
+		method = urllib.parse.quote(method)
 		url = urllib.parse.quote(url,'')
-		params_str = '&'.join(['%s=%s' % (urllib.parse.quote(key, ''),
+		params_str ='&'.join(['%s=%s' % (urllib.parse.quote(key, ''),
 										urllib.parse.quote(params[key], '~')) 
 										for key in sorted(params)])
 		params_str = urllib.parse.quote(params_str,'')
-		message = method + '&' + url + '&' + params_str
-		print(message)
+		return method + '&' + url + '&' + params_str
+	
+	def gen_signature(self,key,message): # keyとmessageを渡すとsignatureを返す
 		hm = hmac.new(key.encode(),message.encode(),hashlib.sha1)
-		
 		return base64.b64encode(hm.digest().strip())
-
-	def gen_header(self,url,params):
-		auth = 'OAuth ' + ','.join(['%s=%s' % (urllib.parse.quote(key,''),urllib.parse.quote(params[key],'~')) for key in sorted(params)])
-		print(auth)
-		req = urllib.request.Request(url)
-		req.add_header('Authorization',auth)
-		return req
-
-	def get_access_token(self):
-		#RequestTokenを取得
+	
+	def get_request_token(self): # 引数なし　request_token と request_token_secretを返す
+		# パラメーターを生成
 		params = PARAMS.copy()
-		params['oauth_signature'] = self.get_signature('GET',REQUEST_TOKEN_URL,CONSUMER_SECRET + '&')
 		
-		argument = urllib.parse.urlencode(params)
-		url = REQUEST_TOKEN_URL + '?' + argument
+		# パラメーターを元にsignatureを生成
+		key = CONSUMER_SECRET + '&'
+		message = self.gen_message('GET',REQUEST_TOKEN_URL,params)
+
+		signature = self.gen_signature(key,message)
 		
-		res = urllib.request.urlopen(url).read()
-		oauth_token = cgi.parse_qs(res)[b'oauth_token'][0].decode()
-		oauth_token_secret = cgi.parse_qs(res)[b'oauth_token_secret'][0].decode()
+		# パラメーターにsignatureを追加
+		params['oauth_signature'] = signature
 		
-		#AccessTokenを取得
-		url = OAUTH_AUTHORIZE_URL + '?oauth_token=' + oauth_token
-		webbrowser.open(url)
+		# URLを生成。　GETメソッドなので、パラメーターはURLの後ろに?で繋げる
+		params = urllib.parse.urlencode(params)
+		url = REQUEST_TOKEN_URL + '?' + params
 		
-			#デバッグコード#
-		pin = input('PIN:').strip()
-				
-		extended_params = {
-			'oauth_token':oauth_token,
-			'oauth_verifier':pin
-			}
+		# oauth_token と oauth_token_secret を取得
+		result = urllib.request.urlopen(url).read()
+		oauth_token = cgi.parse_qs(result)[b'oauth_token'][0].decode()
+		oauth_token_secret = cgi.parse_qs(result)[b'oauth_token'][0].decode()
 		
+		# return
+		return (oauth_token , oauth_token_secret)
+	
+	def get_verifier(self,oauth_token): # oauth_token を入れると、ブラウザが起動してverifierを表示する
+		webbrowser.open(OAUTH_AUTHORIZE_URL + '?oauth_token=' + oauth_token)
+
+	def gen_header_str(self,params):
+		return 'OAuth ' + ','.join(['%s=%s' % (urllib.parse.quote(key,''),urllib.parse.quote(params[key],'~')) for key in sorted(params)])
+	
+	def get_user_dict(self,oauth_token,oauth_token_secret,verifier): # oauth_token,oauth_token_secret,verifierを入れるとaccess_token,access_token_secret,screen_nameを返す
+		# パラメータの準備
 		params = PARAMS.copy()
+		params['oauth_token'] = oauth_token
+		params['oauth_verifier'] = verifier
+		
+		# パラメーターからsignarureを生成
 		key = CONSUMER_SECRET + '&' + oauth_token_secret
-		key = urllib.parse.quote(key)
-		params['signature'] = self.get_signature('POST',ACCESS_TOKEN_URL,key,data=extended_params)
-		params.update(extended_params)
-		argment = urllib.parse.urlencode(params)
-		url = ACCESS_TOKEN_URL + '?' + argment
-		res = cgi.parse_qs(urllib.request.urlopen(url).read())
+		message = self.gen_message('GET',ACCESS_TOKEN_URL,params)
+		signature = self.gen_signature(key,message)
 		
-		return (res[b'screen_name'][0].decode(),res[b'oauth_token'][0].decode(),res[b'oauth_token_secret'][0].decode()) #(token,secret)
+		# パラメーターにsignatureを追加
+		params['oauth_signature'] = signature
+		
+		# URLを生成。 GETメソッドなので、パラメータはURLの後ろに以下略
+		params = urllib.parse.urlencode(params)
+		url = ACCESS_TOKEN_URL + '?' + params
+		
+		# access_token と access_token_secret と screen_nameを取得
+		result = urllib.request.urlopen(url).read()
+		access_token = cgi.parse_qs(result)[b'oauth_token'][0].decode()
+		access_token_secret = cgi.parse_qs(result)[b'oauth_token_secret'][0].decode()
+		screen_name = cgi.parse_qs(result)[b'screen_name'][0].decode()
+		
+		# user_dict 生成
+		self.user_dict = {
+			'access_token':access_token,
+			'access_token_secret':access_token_secret,
+			'screen_name':screen_name
+			# 'icon':そのうち入れるかもしれないけどめんどくさいから後回し
+		}
+		return self.user_dict
 
-	def user_timeline(self,token,token_secret,target,count='20'):
-		params = PARAMS.copy()
-		key = '%s&%s' % (CONSUMER_SECRET,token_secret)
-		extended_params = {
-			'oauth_token':token,
+	def get_user_timeline(self,user_dict,target,count):
+		# 署名
+		option = {
 			'screen_name':target,
+			'include_rts':'false',
 			'count':count
 		}
-		params['oauth_signature'] = self.get_signature('GET',USER_STREAM_URL,key,data=extended_params)
-		params['oauth_token'] = token
-		arg_params = {
-			'screen_name':target,
-			'count':count
-			}
-		argment = urllib.parse.urlencode(arg_params)
-		print(argment)
-		url = USER_STREAM_URL + '?' + argment
-		print(url)
-		req = self.gen_header(url,params)
-		res = urllib.request.urlopen(req).read()
-		tweets = json.loads(res.decode())
+		params = PARAMS.copy()
+		params['oauth_token'] = user_dict['access_token']
+		params.update(option)
 		
-		return tweets
-
-def main():
-	tw = twitter()
-	screen_name,access_token,access_token_secret = tw.get_access_token()
-	print(access_token)
-	a = tw.user_timeline(access_token,access_token_secret,'countboo')
+		key = '%s&%s' % (CONSUMER_SECRET,user_dict['access_token_secret'])
+		message = self.gen_message('GET',USER_TIMELINE_URL,params)
+		
+		signature = self.gen_signature(key,message)
+		
+		# ヘッダ
+		params = PARAMS.copy()
+		params['oauth_token'] = user_dict['access_token']
+		params['oauth_signature'] = signature
+		header_oauth = self.gen_header_str(params)
+		
+		# リクエスト生成
+		url = USER_TIMELINE_URL + '?' + urllib.parse.urlencode(option)
+		req = urllib.request.Request(url)
+		req.add_header('Authorization',header_oauth)
+		
+		result = urllib.request.urlopen(req).read().decode()
+		
+		tweets = json.loads(result)
+		
+		ids = []
+		for t in tweets:
+			ids.append(t['id_str'])
+		return ids
 	
-if __name__ == '__main__':
-	main()
+	def create_fav(self,user_dict,tweet_id):
+		# 署名
+		option = {
+			'id':tweet_id
+		}
+		params = PARAMS.copy()
+		params['oauth_token'] = user_dict['access_token']
+		params.update(option)
+		message = self.gen_message('POST',FAV_URL,params)
+		key = '%s&%s' % (CONSUMER_SECRET,user_dict['access_token_secret'])
+		signature = self.gen_signature(key,message)
+		
+		#ヘッダ
+		params =PARAMS.copy()
+		params['oauth_token'] = user_dict['access_token']
+		params['oauth_signature'] = signature
+		header = self.gen_header_str(params)
+		
+		#データ
+		data = urllib.parse.urlencode(option)
+		
+		#リクエスト生成
+		url = FAV_URL
+		req = urllib.request.Request(url)
+		req.add_header('Authorization',header)
+		req.add_data(data.encode())
+		
+		# urlopen
+		try :
+			urllib.request.urlopen(req)
+		except :
+			pass # すでにfavったツイートとかを踏んでしまった時の対応は後で考えよう。

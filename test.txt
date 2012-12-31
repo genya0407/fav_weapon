@@ -1,2 +1,0 @@
-GET&https%3A%2F%2Fapi.twitter.com%2F1.1%2Fstatuses%2Fuser_timeline.json&oauth_consumer_key%3DHhFnDkO26i4Ct491Q5Zeg%26oauth_nonce%3D7551207250826535360%26oauth_signature_method%3DHMAC-SHA1%26oauth_timestamp%3D1356702177%26oauth_token%3D264147645-UUHUOZNxK0aPqSvXoW4mwG1zLrqmcTbCs1gMDnEA%26oauth_version%3D1.0%26screen_name%3Dcountboo
-https://api.twitter.com/1.1/statuses/user_timeline.json?screen_name=countboo

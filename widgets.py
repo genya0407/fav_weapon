@@ -2,7 +2,7 @@
 from PyQt4 import QtCore
 from PyQt4 import QtGui
 
-import twitter2
+import twitter,pickle
 
 
 class target(QtGui.QWidget):
@@ -11,12 +11,18 @@ class target(QtGui.QWidget):
 		self.setUI()
 	
 	def setUI(self):
-		target_name = QtGui.QLineEdit()
-		trigger_button = QtGui.QPushButton('fav')
-		hbox = QtGui.QHBoxLayout()
+		self.target_name = QtGui.QLineEdit()
+		self.fav_count = QtGui.QLineEdit()
+		self.fav_count.setText('20')
+		self.trigger_button = QtGui.QPushButton('fav')
 		
-		hbox.addWidget(target_name)
-		hbox.addWidget(trigger_button)
+		form = QtGui.QFormLayout()
+		form.addRow('Target:',self.target_name)
+		form.addRow('Count:',self.fav_count)
+		
+		hbox = QtGui.QHBoxLayout()
+		hbox.addLayout(form)
+		hbox.addWidget(self.trigger_button)
 		
 		self.setLayout(hbox)
 
@@ -26,15 +32,9 @@ class user_list(QtGui.QWidget):
 		self.setUI()
 	
 	def setUI(self):
-		list_widget = QtGui.QListWidget()
-			#Item編集部-->あとで関数化
-		item1 = QtGui.QListWidgetItem()
-		item1.setText('genya0407')
-		item1.setIcon(QtGui.QIcon(QtGui.QPixmap('/home/yusuke/github/qt-practice/icon.jpg')))
-		
-		list_widget.addItem(item1)
+		self.list_widget = QtGui.QListWidget()
 		vbox = QtGui.QVBoxLayout()
-		vbox.addWidget(list_widget)
+		vbox.addWidget(self.list_widget)
 		self.setLayout(vbox)
 
 class auth_widget(QtGui.QWidget):
@@ -58,6 +58,7 @@ class main_widget(QtGui.QWidget):
 	def __init__(self, parent=None):
 		QtGui.QWidget.__init__(self, parent=parent)
 		self.setUI()
+		self.user_list = []
 	
 	def setUI(self):
 		vbox = QtGui.QVBoxLayout()
@@ -66,11 +67,13 @@ class main_widget(QtGui.QWidget):
 		self.ul = user_list()
 		self.aw = auth_widget()
 		
-		self.act = action()
+			# connect
+		# auth_widget #
+		self.aw.launch_auth_window.clicked.connect(self.open_url)
+		self.aw.add_user.clicked.connect(self.add_user_dict)
 		
-			#connect
-		self.aw.launch_auth_window.clicked.connect(self.act.open_url)
-		self.aw.add_user.clicked.connect(self.pass_verifier)
+		# target #
+		self.tg.trigger_button.clicked.connect(self.fav)
 		
 		vbox.addWidget(self.tg)
 		vbox.addWidget(self.ul)
@@ -78,36 +81,41 @@ class main_widget(QtGui.QWidget):
 		
 		self.setLayout(vbox)
 	
-	def pass_verifier(self):
-		pin = self.aw.verify_num.text().strip()
-#		print(pin)
-		self.act.create_user_dict(pin)
-
-class action(object):
-	def __init__(self):
-		self.twitter = twitter()
-	
 	def open_url(self):
+		self.twitter = twitter.twitter()
 		self.request_token,self.request_token_secret = self.twitter.get_request_token()
-		self.twitter.get_verifier(request_token)
+		self.twitter.get_verifier(self.request_token) #open varifiy url
 	
-	def get_access_token(self,verifier):
-		access_token,access_token_secret,screen_name = self.twitter.get_access_token(self.request_token,self.request_token_secret,verifier)
-		return [self.access_token,self.access_token_secret,screen_name]
+	def add_user_dict(self): # verifier取得 -> get_access_token
+		verifier = self.aw.verify_num.text()
+		user_dict = self.twitter.get_user_dict(self.request_token,self.request_token_secret,verifier)
+		
+		self.user_list.append(user_dict)
+		
+		self.aw.verify_num.clear()
+		self.update_user_list_display()
+		
+	def update_user_list_display(self):
+		item = QtGui.QListWidgetItem()
+		for user_dict in self.user_list:
+			item.setText(user_dict['screen_name'])
+			self.ul.list_widget.addItem(item)
 	
-	def create_user_dict(self,verifier):
-		access = self.get_access_token(verifier)
+	def fav(self): 
+		# target の screen_name を取得
+		target = self.tg.target_name.text()
+		count = self.tg.fav_count.text()
 		
-		access_token = access[0]
-		access_token_secret = access[1]
-		screen_name =  access[2]
-		user_dict = {
-			'screen_name':screen_name,
-			'access_token':access_token,
-			'access_token_secret':access_token_secret
-		}
+		# target の user_timeline の tweet_id_str の list を取得
+		tweets_id = self.twitter.get_user_timeline(self.user_list[0],target,count)
 		
-		return user_dict
+		# self.user_list に入ってる user_dict を使って、すべてのtweets_idを fav する
+		for user in self.user_list:
+			for t in tweets_id:
+				self.twitter.create_fav(user,t)
+				print('favorited ' + target + "'s tweet by " + user['screen_name'])
+		
+		print('finished favoricatig')
 
 def main():
 	app = QtGui.QApplication([])
@@ -116,7 +124,6 @@ def main():
 	mw = main_widget()
 	main_window.setCentralWidget(mw)
 	main_window.setWindowTitle('weapons_of_mass_favoritation')
-	
 	main_window.show()
 	
 	app.exec_()
