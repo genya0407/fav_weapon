@@ -109,6 +109,8 @@ class main_widget(QtGui.QWidget):
 		self.update_user_list_display()
 		
 	def update_user_list_display(self):
+		self.ul.list_widget.clear()
+		
 		for user_dict in self.user_list:
 			item = QtGui.QListWidgetItem()
 			item.setText(user_dict['screen_name'])
