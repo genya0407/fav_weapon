@@ -60,7 +60,7 @@ class twitter(object):
 		return (oauth_token , oauth_token_secret)
 	
 	def get_verifier(self,oauth_token): # oauth_token を入れると、ブラウザが起動してverifierを表示する
-		webbrowser.open(OAUTH_AUTHORIZE_URL + '?oauth_token=' + oauth_token)
+		return OAUTH_AUTHORIZE_URL + '?oauth_token=' + oauth_token
 
 	def gen_header_str(self,params):
 		return 'OAuth ' + ','.join(['%s=%s' % (urllib.parse.quote(key,''),urllib.parse.quote(params[key],'~')) for key in sorted(params)])
@@ -90,13 +90,13 @@ class twitter(object):
 		screen_name = cgi.parse_qs(result)[b'screen_name'][0].decode()
 		
 		# user_dict 生成
-		self.user_dict = {
+		user_dict = {
 			'access_token':access_token,
 			'access_token_secret':access_token_secret,
 			'screen_name':screen_name
 			# 'icon':そのうち入れるかもしれないけどめんどくさいから後回し
 		}
-		return self.user_dict
+		return user_dict
 
 	def get_user_timeline(self,user_dict,target,count):
 		# 署名
